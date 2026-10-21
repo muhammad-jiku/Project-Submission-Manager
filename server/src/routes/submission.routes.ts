@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit";
 import { asyncHandler } from "../middleware/async-handler";
 import { protect } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { createSubmission } from "../services/submission.service";
+import { createSubmission, getMySubmission } from "../services/submission.service";
 import { createSubmissionSchema } from "../validators/submission";
 
 const router = Router();
@@ -16,6 +16,15 @@ const createSubmissionLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many submission attempts, please try again later" },
 });
+
+router.get(
+  "/me",
+  ...protect("STUDENT"),
+  asyncHandler(async (req, res) => {
+    const submission = await getMySubmission(req.user!.id);
+    res.status(200).json(submission);
+  })
+);
 
 router.post(
   "/",

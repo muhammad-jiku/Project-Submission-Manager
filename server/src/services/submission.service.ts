@@ -4,6 +4,10 @@ import { AppError } from "../middleware/error-handler";
 import { prisma } from "../lib/prisma";
 import type { CreateSubmissionInput } from "../validators/submission";
 
+export async function getMySubmission(studentId: string) {
+  return prisma.submission.findUnique({ where: { studentId } });
+}
+
 export async function createSubmission(studentId: string, input: CreateSubmissionInput) {
   const existing = await prisma.submission.findUnique({ where: { studentId } });
 

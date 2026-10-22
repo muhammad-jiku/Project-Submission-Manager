@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { PageLoader } from "@/components/page-loader";
 import { useAuth } from "@/providers/auth-provider";
 import type { Role } from "@/lib/types";
 
@@ -30,11 +31,7 @@ export function RouteGuard({
   }, [user, isLoading, role, router]);
 
   if (isLoading || !user || user.role !== role) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">
-        Loading...
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return <>{children}</>;

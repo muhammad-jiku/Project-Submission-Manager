@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/password-input";
 import { api, ApiError } from "@/lib/api";
 
 const signupSchema = z.object({
@@ -52,9 +54,12 @@ export default function SignupPage() {
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm transition-shadow duration-300 hover:shadow-md">
       <CardHeader>
-        <CardTitle>Sign up</CardTitle>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <UserPlus className="h-5 w-5" />
+        </div>
+        <CardTitle className="mt-3 text-xl">Sign up</CardTitle>
         <CardDescription>Create a student account to submit your project</CardDescription>
       </CardHeader>
       <CardContent>
@@ -75,7 +80,7 @@ export default function SignupPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register("password")} />
+            <PasswordInput id="password" {...register("password")} />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}

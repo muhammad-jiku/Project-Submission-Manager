@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  CheckCircle2,
+  Clock,
+  FolderGit2,
+  Inbox,
+  ListChecks,
+  XCircle,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -31,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { StatusBadge } from "@/components/status-badge";
 import { api, ApiError } from "@/lib/api";
@@ -92,14 +102,19 @@ function DashboardContent() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Review Dashboard</h1>
+    <main className="mx-auto w-full max-w-5xl flex-1 animate-in fade-in slide-in-from-bottom-2 space-y-6 p-6 duration-500">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Review Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Approve or reject student project submissions
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total" value={stats?.total} />
-        <StatCard label="Pending" value={stats?.PENDING} />
-        <StatCard label="Approved" value={stats?.APPROVED} />
-        <StatCard label="Rejected" value={stats?.REJECTED} />
+        <StatCard label="Total" value={stats?.total} icon={ListChecks} tone="default" />
+        <StatCard label="Pending" value={stats?.PENDING} icon={Clock} tone="amber" />
+        <StatCard label="Approved" value={stats?.APPROVED} icon={CheckCircle2} tone="green" />
+        <StatCard label="Rejected" value={stats?.REJECTED} icon={XCircle} tone="red" />
       </div>
 
       <div className="flex items-center justify-between">
@@ -123,7 +138,7 @@ function DashboardContent() {
         </Select>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -136,22 +151,46 @@ function DashboardContent() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="mt-1 h-3 w-36" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-8 w-32" />
+                  </TableCell>
+                </TableRow>
+              ))
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  No submissions found
+                <TableCell colSpan={5} className="py-12">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Inbox className="h-8 w-8" />
+                    <p className="text-sm">No submissions found</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               data?.items.map((submission) => (
-                <TableRow key={submission.id}>
+                <TableRow key={submission.id} className="transition-colors hover:bg-muted/50">
                   <TableCell>
-                    <a href={submission.repoUrl} target="_blank" rel="noreferrer" className="underline">
+                    <a
+                      href={submission.repoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 font-medium hover:text-primary"
+                    >
+                      <FolderGit2 className="h-4 w-4 text-muted-foreground" />
                       {submission.projectName}
                     </a>
                   </TableCell>
@@ -211,14 +250,38 @@ function DashboardContent() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value?: number }) {
+const TONE_STYLES = {
+  default: "bg-primary/10 text-primary",
+  amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  green: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  red: "bg-red-500/10 text-red-600 dark:text-red-400",
+} as const;
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value?: number;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: keyof typeof TONE_STYLES;
+}) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-normal text-muted-foreground">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{value ?? "–"}</div>
+    <Card className="transition-shadow duration-300 hover:shadow-md">
+      <CardContent className="flex items-center gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${TONE_STYLES[tone]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          {value === undefined ? (
+            <Skeleton className="h-7 w-10" />
+          ) : (
+            <div className="text-2xl font-semibold leading-none">{value}</div>
+          )}
+          <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -267,7 +330,9 @@ function DecisionDialog({
 export default function DashboardPage() {
   return (
     <RouteGuard role="ADMIN">
-      <DashboardContent />
+      <AppShell>
+        <DashboardContent />
+      </AppShell>
     </RouteGuard>
   );
 }

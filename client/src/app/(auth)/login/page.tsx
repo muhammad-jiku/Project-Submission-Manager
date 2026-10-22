@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/password-input";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import type { User } from "@/lib/types";
@@ -50,9 +52,12 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm transition-shadow duration-300 hover:shadow-md">
       <CardHeader>
-        <CardTitle>Log in</CardTitle>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <LogIn className="h-5 w-5" />
+        </div>
+        <CardTitle className="mt-3 text-xl">Log in</CardTitle>
         <CardDescription>Enter your credentials to access your account</CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,7 +71,7 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register("password")} />
+            <PasswordInput id="password" {...register("password")} />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}

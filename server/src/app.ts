@@ -37,8 +37,7 @@ app.get("/health", async (_req, res) => {
     res.json({ status: "ok", db: "connected" });
   } catch (err) {
     console.error("Health check DB connection failed:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(503).json({ status: "error", db: "unreachable", message });
+    res.status(503).json({ status: "error", db: "unreachable" });
   }
 });
 

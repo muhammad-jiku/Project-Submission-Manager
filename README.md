@@ -1,7 +1,8 @@
 # Submission Manager
 
-A project submission and review dashboard. Students submit a project (name, repo URL, live link,
-description); mentors review the queue, filter by status, and approve or reject each one.
+A project submission and review dashboard. Students submit projects (name, repo URL, live link,
+description) — any number of them, as long as the same repo isn't submitted twice by the same
+student; mentors search and filter the queue by status, and approve or reject each one.
 
 ## Project structure
 

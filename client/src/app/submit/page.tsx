@@ -1,8 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, GitBranch, Rocket } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Rocket, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -17,13 +18,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
-import { StatusBadge } from "@/components/status-badge";
+import { SubmissionCard } from "@/components/submission-card";
+import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
-import type { Submission } from "@/lib/types";
+import type { PaginatedMySubmissions, Submission } from "@/lib/types";
 
 const submissionSchema = z.object({
   projectName: z.string().trim().min(2, "Project name must be at least 2 characters").max(150),
@@ -34,149 +35,171 @@ const submissionSchema = z.object({
 
 type SubmissionInput = z.infer<typeof submissionSchema>;
 
+const PAGE_SIZE = 6;
+
 function SubmitPageContent() {
-  const [existing, setExisting] = useState<Submission | null | undefined>(undefined);
+  const searchParams = useSearchParams();
+  const [data, setData] = useState<PaginatedMySubmissions | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(searchParams.get("new") === "1");
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SubmissionInput>({ resolver: zodResolver(submissionSchema) });
 
-  useEffect(() => {
-    api
-      .get<Submission | null>("/submissions/me")
-      .then(setExisting)
-      .catch(() => setExisting(null));
-  }, []);
-
-  async function onSubmit(data: SubmissionInput) {
+  const load = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const submission = await api.post<Submission>("/submissions", data);
-      toast.success("Project submitted successfully");
-      setExisting(submission);
+      const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (search) query.set("search", search);
+      const result = await api.get<PaginatedMySubmissions>(`/submissions/me?${query.toString()}`);
+      setData(result);
+      if (result.pagination.total === 0) setShowForm(true);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        toast.error(err.message);
-        const mine = await api.get<Submission | null>("/submissions/me");
-        setExisting(mine);
-        return;
-      }
+      toast.error(err instanceof ApiError ? err.message : "Failed to load submissions");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, search]);
+
+  useEffect(() => {
+    // Fetch-on-mount/filter-change: load() only sets state inside async
+    // callbacks after awaiting the API, never synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function onSubmit(formData: SubmissionInput) {
+    try {
+      await api.post<Submission>("/submissions", formData);
+      toast.success("Project submitted successfully");
+      reset();
+      setShowForm(false);
+      setPage(1);
+      await load();
+    } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
-  if (existing === undefined) {
-    return (
-      <main className="flex flex-1 items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <Card className="w-full max-w-lg shadow-sm transition-shadow duration-300 hover:shadow-md">
-          <CardHeader>
-            <Skeleton className="h-10 w-10 rounded-lg" />
-            <Skeleton className="mt-3 h-6 w-40" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
-
-  if (existing) {
-    return (
-      <main className="flex flex-1 items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <Card className="w-full max-w-lg shadow-sm transition-shadow duration-300 hover:shadow-md">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <CardTitle className="text-xl">{existing.projectName}</CardTitle>
-              <StatusBadge status={existing.status} />
-            </div>
-            <CardDescription>You have already submitted a project</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <a href={existing.repoUrl} target="_blank" rel="noreferrer">
-                  <GitBranch className="h-4 w-4" />
-                  Repository
-                </a>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <a href={existing.liveLink} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  Live demo
-                </a>
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              <div className="text-sm font-medium">Description</div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {existing.description}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
-
   return (
-    <main className="flex flex-1 items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <Card className="w-full max-w-lg shadow-sm transition-shadow duration-300 hover:shadow-md">
-        <CardHeader>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Rocket className="h-5 w-5" />
+    <main className="mx-auto w-full max-w-5xl flex-1 animate-in fade-in slide-in-from-bottom-2 space-y-6 p-6 duration-500">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">My Submissions</h1>
+          <p className="text-sm text-muted-foreground">Submit and track your projects</p>
+        </div>
+        {!showForm && (
+          <Button onClick={() => setShowForm(true)}>
+            <Rocket className="h-4 w-4" />
+            New submission
+          </Button>
+        )}
+      </div>
+
+      {showForm && (
+        <Card className="shadow-sm transition-shadow duration-300 hover:shadow-md">
+          <CardHeader>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Rocket className="h-5 w-5" />
+            </div>
+            <CardTitle className="mt-3 text-xl">Submit a project</CardTitle>
+            <CardDescription>
+              You can submit as many projects as you like, but not the same repo twice
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="projectName">Project name</Label>
+                <Input
+                  id="projectName"
+                  placeholder="My awesome project"
+                  {...register("projectName")}
+                />
+                {errors.projectName && (
+                  <p className="text-sm text-destructive">{errors.projectName.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="repoUrl">Repo URL</Label>
+                <Input
+                  id="repoUrl"
+                  placeholder="https://github.com/you/project"
+                  {...register("repoUrl")}
+                />
+                {errors.repoUrl && (
+                  <p className="text-sm text-destructive">{errors.repoUrl.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="liveLink">Live link</Label>
+                <Input
+                  id="liveLink"
+                  placeholder="https://project.example.com"
+                  {...register("liveLink")}
+                />
+                {errors.liveLink && (
+                  <p className="text-sm text-destructive">{errors.liveLink.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  rows={5}
+                  placeholder="What does it do, what did you build it with, and why?"
+                  {...register("description")}
+                />
+                {errors.description && (
+                  <p className="text-sm text-destructive">{errors.description.message}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {data && data.pagination.total > 0 && (
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </Button>
+                )}
+                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit project"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {(!showForm || (data && data.pagination.total > 0)) && (
+        <div className="space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search your submissions..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
           </div>
-          <CardTitle className="mt-3 text-xl">Submit your project</CardTitle>
-          <CardDescription>You can only submit one project, so make it count</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="projectName">Project name</Label>
-              <Input id="projectName" placeholder="My awesome project" {...register("projectName")} />
-              {errors.projectName && (
-                <p className="text-sm text-destructive">{errors.projectName.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="repoUrl">Repo URL</Label>
-              <Input id="repoUrl" placeholder="https://github.com/you/project" {...register("repoUrl")} />
-              {errors.repoUrl && (
-                <p className="text-sm text-destructive">{errors.repoUrl.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="liveLink">Live link</Label>
-              <Input id="liveLink" placeholder="https://project.example.com" {...register("liveLink")} />
-              {errors.liveLink && (
-                <p className="text-sm text-destructive">{errors.liveLink.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                rows={5}
-                placeholder="What does it do, what did you build it with, and why?"
-                {...register("description")}
-              />
-              {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Submit project"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <SubmissionGrid
+            items={data?.items ?? []}
+            pagination={data?.pagination ?? null}
+            isLoading={isLoading}
+            page={page}
+            onPageChange={setPage}
+            renderCard={(submission) => <SubmissionCard submission={submission} />}
+            emptyMessage="No submissions match your search"
+          />
+        </div>
+      )}
     </main>
   );
 }
@@ -185,7 +208,9 @@ export default function SubmitPage() {
   return (
     <RouteGuard role="STUDENT">
       <AppShell>
-        <SubmitPageContent />
+        <Suspense>
+          <SubmitPageContent />
+        </Suspense>
       </AppShell>
     </RouteGuard>
   );

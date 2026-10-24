@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Clock,
-  FolderGit2,
-  Inbox,
-  ListChecks,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Clock, ListChecks, Search, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -32,17 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
-import { StatusBadge } from "@/components/status-badge";
+import { SubmissionCard } from "@/components/submission-card";
+import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
 import type {
   PaginatedSubmissions,
@@ -51,7 +38,7 @@ import type {
   SubmissionWithStudent,
 } from "@/lib/types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 const STATUS_OPTIONS: (SubmissionStatus | "ALL")[] = ["ALL", "PENDING", "APPROVED", "REJECTED"];
 
 function DashboardContent() {
@@ -60,6 +47,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">("ALL");
+  const [search, setSearch] = useState("");
   const [actioningId, setActioningId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -70,6 +58,7 @@ function DashboardContent() {
         limit: String(PAGE_SIZE),
       });
       if (statusFilter !== "ALL") query.set("status", statusFilter);
+      if (search) query.set("search", search);
 
       const [list, statsResult] = await Promise.all([
         api.get<PaginatedSubmissions>(`/review/submissions?${query.toString()}`),
@@ -82,7 +71,7 @@ function DashboardContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, search]);
 
   useEffect(() => {
     // Fetch-on-mount/filter-change: load() only sets state inside async
@@ -120,7 +109,19 @@ function DashboardContent() {
         <StatCard label="Rejected" value={stats?.REJECTED} icon={XCircle} tone="red" />
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by project or student..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
         <Select
           value={statusFilter}
           onValueChange={(value) => {
@@ -141,114 +142,35 @@ function DashboardContent() {
         </Select>
       </div>
 
-      <div className="rounded-md border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Project</TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Submitted</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="mt-1 h-3 w-36" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Skeleton className="ml-auto h-8 w-32" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : data?.items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Inbox className="h-8 w-8" />
-                    <p className="text-sm">No submissions found</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.items.map((submission) => (
-                <TableRow key={submission.id} className="transition-colors hover:bg-muted/50">
-                  <TableCell>
-                    <a
-                      href={submission.repoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 font-medium hover:text-primary"
-                    >
-                      <FolderGit2 className="h-4 w-4 text-muted-foreground" />
-                      {submission.projectName}
-                    </a>
-                  </TableCell>
-                  <TableCell>
-                    <div>{submission.student.name}</div>
-                    <div className="text-sm text-muted-foreground">{submission.student.email}</div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={submission.status} />
-                  </TableCell>
-                  <TableCell>{new Date(submission.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="space-x-2 text-right">
-                    <DecisionDialog
-                      submission={submission}
-                      decision="approve"
-                      disabled={submission.status === "APPROVED" || actioningId === submission.id}
-                      onConfirm={() => handleDecision(submission, "approve")}
-                    />
-                    <DecisionDialog
-                      submission={submission}
-                      decision="reject"
-                      disabled={submission.status === "REJECTED" || actioningId === submission.id}
-                      onConfirm={() => handleDecision(submission, "reject")}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data && data.pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {data.pagination.page} of {data.pagination.totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= data.pagination.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      <SubmissionGrid
+        items={data?.items ?? []}
+        pagination={data?.pagination ?? null}
+        isLoading={isLoading}
+        page={page}
+        onPageChange={setPage}
+        emptyMessage="No submissions match your filters"
+        renderCard={(submission) => (
+          <SubmissionCard
+            submission={submission}
+            actions={
+              <div className="flex gap-2">
+                <DecisionDialog
+                  submission={submission}
+                  decision="approve"
+                  disabled={submission.status === "APPROVED" || actioningId === submission.id}
+                  onConfirm={() => handleDecision(submission, "approve")}
+                />
+                <DecisionDialog
+                  submission={submission}
+                  decision="reject"
+                  disabled={submission.status === "REJECTED" || actioningId === submission.id}
+                  onConfirm={() => handleDecision(submission, "reject")}
+                />
+              </div>
+            }
+          />
+        )}
+      />
     </main>
   );
 }
@@ -318,7 +240,8 @@ function DecisionDialog({
             {decision === "approve" ? "Approve" : "Reject"} &quot;{submission.projectName}&quot;?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This will mark the submission by {submission.student.name} as {decision === "approve" ? "approved" : "rejected"}.
+            This will mark the submission by {submission.student.name} as{" "}
+            {decision === "approve" ? "approved" : "rejected"}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

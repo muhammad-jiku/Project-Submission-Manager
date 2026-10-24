@@ -1,9 +1,22 @@
+import type { Prisma } from "@prisma/client";
+
 import { AppError } from "../middleware/error-handler";
 import { prisma } from "../lib/prisma";
 import type { ListSubmissionsQuery } from "../validators/submission";
 
-export async function listSubmissions({ page, limit, status }: ListSubmissionsQuery) {
-  const where = status ? { status } : {};
+export async function listSubmissions({ page, limit, status, search }: ListSubmissionsQuery) {
+  const where: Prisma.SubmissionWhereInput = {
+    ...(status ? { status } : {}),
+    ...(search
+      ? {
+          OR: [
+            { projectName: { contains: search, mode: "insensitive" } },
+            { student: { name: { contains: search, mode: "insensitive" } } },
+            { student: { email: { contains: search, mode: "insensitive" } } },
+          ],
+        }
+      : {}),
+  };
 
   const [items, total] = await Promise.all([
     prisma.submission.findMany({

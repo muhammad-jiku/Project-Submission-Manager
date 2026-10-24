@@ -4,8 +4,8 @@ import rateLimit from "express-rate-limit";
 import { asyncHandler } from "../middleware/async-handler";
 import { protect } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { createSubmission, getMySubmission } from "../services/submission.service";
-import { createSubmissionSchema } from "../validators/submission";
+import { createSubmission, getMySubmissions } from "../services/submission.service";
+import { createSubmissionSchema, listMySubmissionsQuerySchema } from "../validators/submission";
 
 const router = Router();
 
@@ -21,8 +21,9 @@ router.get(
   "/me",
   ...protect("STUDENT"),
   asyncHandler(async (req, res) => {
-    const submission = await getMySubmission(req.user!.id);
-    res.status(200).json(submission);
+    const query = listMySubmissionsQuerySchema.parse(req.query);
+    const result = await getMySubmissions(req.user!.id, query);
+    res.status(200).json(result);
   })
 );
 

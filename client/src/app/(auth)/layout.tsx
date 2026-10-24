@@ -1,5 +1,7 @@
 import { CheckCircle2, LayoutDashboard, Layers, ShieldCheck } from "lucide-react";
 
+import { Footer } from "@/components/footer";
+
 const FEATURES = [
   { icon: CheckCircle2, text: "Submit your project in minutes" },
   { icon: LayoutDashboard, text: "Track review status in real time" },
@@ -83,9 +85,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           A simple, focused workflow for students and mentors.
         </div>
       </div>
-      <main className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500">{children}</div>
-      </main>
+      <div className="flex flex-1 flex-col">
+        <main className="flex flex-1 items-center justify-center p-6">
+          <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {children}
+          </div>
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }

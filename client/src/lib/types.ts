@@ -26,15 +26,20 @@ export type SubmissionWithStudent = Submission & {
   student: Pick<User, "id" | "name" | "email">;
 };
 
-export type PaginatedSubmissions = {
-  items: SubmissionWithStudent[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+export type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
+
+export type Paginated<T> = {
+  items: T[];
+  pagination: Pagination;
+};
+
+export type PaginatedSubmissions = Paginated<SubmissionWithStudent>;
+export type PaginatedMySubmissions = Paginated<Submission>;
 
 export type SubmissionStats = {
   PENDING: number;

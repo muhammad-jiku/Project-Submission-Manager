@@ -30,6 +30,20 @@ const loginLimiter = rateLimit({
 const COOKIE_NAME = "token";
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// In production, the frontend and backend live on different *.vercel.app
+// subdomains, which Vercel registers as separate "sites" for cookie
+// purposes. A SameSite=Lax cookie is never attached to background fetch()
+// calls across different sites (only top-level navigation), so the
+// frontend's calls to protected routes would always look unauthenticated.
+// SameSite=None (which requires Secure) is required for this to work.
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+};
+
 router.post(
   "/signup",
   signupLimiter,
@@ -48,9 +62,7 @@ router.post(
     const { token, user } = await signInUser(req.body);
 
     res.cookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: COOKIE_MAX_AGE_MS,
     });
 
@@ -59,7 +71,7 @@ router.post(
 );
 
 router.post("/logout", (_req, res) => {
-  res.clearCookie(COOKIE_NAME);
+  res.clearCookie(COOKIE_NAME, cookieOptions);
   res.status(200).json({ message: "Logged out" });
 });
 

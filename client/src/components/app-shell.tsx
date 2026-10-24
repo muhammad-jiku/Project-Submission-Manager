@@ -1,7 +1,6 @@
 "use client";
 
-import { LogOut, Plus } from "lucide-react";
-import Link from "next/link";
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,14 +35,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <BrandMark />
           {user && (
             <div className="flex items-center gap-3">
-              {user.role === "STUDENT" && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/submit?new=1">
-                    <Plus className="h-4 w-4" />
-                    New submission
-                  </Link>
-                </Button>
-              )}
               <div className="hidden text-right text-sm sm:block">
                 <div className="font-medium leading-tight">{user.name}</div>
                 <div className="text-xs text-muted-foreground leading-tight">{user.email}</div>

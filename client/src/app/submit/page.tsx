@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Rocket, Search } from "lucide-react";
+import { Rocket } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import { SearchInput } from "@/components/search-input";
 import { SubmissionCard } from "@/components/submission-card";
 import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
@@ -177,18 +178,14 @@ function SubmitPageContent() {
       </div>
 
       <div className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search your submissions..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
+        <SearchInput
+          placeholder="Search your submissions..."
+          className="max-w-sm"
+          onSearch={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+        />
         <SubmissionGrid
           items={data?.items ?? []}
           pagination={data?.pagination ?? null}

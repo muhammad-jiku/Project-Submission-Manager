@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clock, ListChecks, Search, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, ListChecks, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,7 +17,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -28,6 +27,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import { SearchInput } from "@/components/search-input";
 import { SubmissionCard } from "@/components/submission-card";
 import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
@@ -110,18 +110,14 @@ function DashboardContent() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by project or student..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
+        <SearchInput
+          placeholder="Search by project or student..."
+          className="max-w-sm flex-1"
+          onSearch={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+        />
         <Select
           value={statusFilter}
           onValueChange={(value) => {

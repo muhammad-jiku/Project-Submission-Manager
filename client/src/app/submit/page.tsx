@@ -10,12 +10,13 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,7 +44,7 @@ function SubmitPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(searchParams.get("new") === "1");
+  const [dialogOpen, setDialogOpen] = useState(searchParams.get("new") === "1");
 
   const {
     register,
@@ -59,7 +60,7 @@ function SubmitPageContent() {
       if (search) query.set("search", search);
       const result = await api.get<PaginatedMySubmissions>(`/submissions/me?${query.toString()}`);
       setData(result);
-      if (result.pagination.total === 0) setShowForm(true);
+      if (result.pagination.total === 0 && !search) setDialogOpen(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to load submissions");
     } finally {
@@ -74,12 +75,22 @@ function SubmitPageContent() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    // Reacts to the header's "New submission" link (?new=1) even when it's a
+    // client-side navigation to a page that's already mounted, not just on
+    // first load.
+    if (searchParams.get("new") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDialogOpen(true);
+    }
+  }, [searchParams]);
+
   async function onSubmit(formData: SubmissionInput) {
     try {
       await api.post<Submission>("/submissions", formData);
       toast.success("Project submitted successfully");
       reset();
-      setShowForm(false);
+      setDialogOpen(false);
       setPage(1);
       await load();
     } catch (err) {
@@ -94,26 +105,23 @@ function SubmitPageContent() {
           <h1 className="text-2xl font-semibold tracking-tight">My Submissions</h1>
           <p className="text-sm text-muted-foreground">Submit and track your projects</p>
         </div>
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)}>
-            <Rocket className="h-4 w-4" />
-            New submission
-          </Button>
-        )}
-      </div>
-
-      {showForm && (
-        <Card className="shadow-sm transition-shadow duration-300 hover:shadow-md">
-          <CardHeader>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Rocket className="h-5 w-5" />
-            </div>
-            <CardTitle className="mt-3 text-xl">Submit a project</CardTitle>
-            <CardDescription>
-              You can submit as many projects as you like, but not the same repo twice
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Rocket className="h-4 w-4" />
+              New submission
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Rocket className="h-5 w-5" />
+              </div>
+              <DialogTitle className="mt-3">Submit a project</DialogTitle>
+              <DialogDescription>
+                You can submit as many projects as you like, but not the same repo twice
+              </DialogDescription>
+            </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="projectName">Project name</Label>
@@ -160,46 +168,37 @@ function SubmitPageContent() {
                   <p className="text-sm text-destructive">{errors.description.message}</p>
                 )}
               </div>
-              <div className="flex gap-2">
-                {data && data.pagination.total > 0 && (
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                    Cancel
-                  </Button>
-                )}
-                <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : "Submit project"}
-                </Button>
-              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Submit project"}
+              </Button>
             </form>
-          </CardContent>
-        </Card>
-      )}
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      {(!showForm || (data && data.pagination.total > 0)) && (
-        <div className="space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search your submissions..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <SubmissionGrid
-            items={data?.items ?? []}
-            pagination={data?.pagination ?? null}
-            isLoading={isLoading}
-            page={page}
-            onPageChange={setPage}
-            renderCard={(submission) => <SubmissionCard submission={submission} />}
-            emptyMessage="No submissions match your search"
+      <div className="space-y-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search your submissions..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
-      )}
+        <SubmissionGrid
+          items={data?.items ?? []}
+          pagination={data?.pagination ?? null}
+          isLoading={isLoading}
+          page={page}
+          onPageChange={setPage}
+          renderCard={(submission) => <SubmissionCard submission={submission} />}
+          emptyMessage="No submissions match your search"
+        />
+      </div>
     </main>
   );
 }

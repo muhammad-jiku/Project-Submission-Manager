@@ -1,0 +1,32 @@
+{
+  "name": "project-submission-manager",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "lint:client": "npm --prefix client run lint",
+    "lint:server": "npm --prefix server run lint",
+    "type-check:client": "npm --prefix client run type-check",
+    "type-check:server": "npm --prefix server run type-check",
+    "type-check": "npm run type-check:client && npm run type-check:server",
+    "format": "prettier --write \"**/*.{md,json,yml,yaml}\" --ignore-path .prettierignore"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.6.14"
+  },
+  "lint-staged": {
+    "client/**/*.{ts,tsx}": [
+      "bash -c 'npm run lint:client'"
+    ],
+    "server/**/*.ts": [
+      "bash -c 'npm run lint:server'"
+    ],
+    "*.{md,json,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

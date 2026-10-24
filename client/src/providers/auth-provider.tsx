@@ -38,6 +38,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Fetch-on-mount: refetch() only sets state inside async callbacks after
+    // awaiting the API, never synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refetch();
   }, [refetch]);
 

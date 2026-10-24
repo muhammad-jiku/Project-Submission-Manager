@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -85,6 +85,9 @@ function DashboardContent() {
   }, [page, statusFilter]);
 
   useEffect(() => {
+    // Fetch-on-mount/filter-change: load() only sets state inside async
+    // callbacks after awaiting the API, never synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

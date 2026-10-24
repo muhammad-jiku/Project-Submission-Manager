@@ -23,10 +23,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { SearchInput } from "@/components/search-input";
+import { StatusFilter } from "@/components/status-filter";
 import { SubmissionCard } from "@/components/submission-card";
 import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
-import type { PaginatedMySubmissions, Submission } from "@/lib/types";
+import type { PaginatedMySubmissions, Submission, SubmissionStatus } from "@/lib/types";
 
 const submissionSchema = z.object({
   projectName: z.string().trim().min(2, "Project name must be at least 2 characters").max(150),
@@ -45,6 +46,7 @@ function SubmitPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">("ALL");
   const [dialogOpen, setDialogOpen] = useState(searchParams.get("new") === "1");
 
   const {
@@ -58,16 +60,17 @@ function SubmitPageContent() {
     setIsLoading(true);
     try {
       const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (statusFilter !== "ALL") query.set("status", statusFilter);
       if (search) query.set("search", search);
       const result = await api.get<PaginatedMySubmissions>(`/submissions/me?${query.toString()}`);
       setData(result);
-      if (result.pagination.total === 0 && !search) setDialogOpen(true);
+      if (result.pagination.total === 0 && !search && statusFilter === "ALL") setDialogOpen(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to load submissions");
     } finally {
       setIsLoading(false);
     }
-  }, [page, search]);
+  }, [page, statusFilter, search]);
 
   useEffect(() => {
     // Fetch-on-mount/filter-change: load() only sets state inside async
@@ -178,14 +181,23 @@ function SubmitPageContent() {
       </div>
 
       <div className="space-y-4">
-        <SearchInput
-          placeholder="Search your submissions..."
-          className="max-w-sm"
-          onSearch={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search your submissions..."
+            className="max-w-sm flex-1"
+            onSearch={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+          />
+          <StatusFilter
+            value={statusFilter}
+            onChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+          />
+        </div>
         <SubmissionGrid
           items={data?.items ?? []}
           pagination={data?.pagination ?? null}
@@ -193,7 +205,7 @@ function SubmitPageContent() {
           page={page}
           onPageChange={setPage}
           renderCard={(submission) => <SubmissionCard submission={submission} />}
-          emptyMessage="No submissions match your search"
+          emptyMessage="No submissions match your filters"
         />
       </div>
     </main>

@@ -6,10 +6,11 @@ import type { CreateSubmissionInput, ListMySubmissionsQuery } from "../validator
 
 export async function getMySubmissions(
   studentId: string,
-  { page, limit, search }: ListMySubmissionsQuery
+  { page, limit, status, search }: ListMySubmissionsQuery
 ) {
   const where: Prisma.SubmissionWhereInput = {
     studentId,
+    ...(status ? { status } : {}),
     ...(search ? { projectName: { contains: search, mode: "insensitive" } } : {}),
   };
 

@@ -17,17 +17,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { SearchInput } from "@/components/search-input";
+import { StatusFilter } from "@/components/status-filter";
 import { SubmissionCard } from "@/components/submission-card";
 import { SubmissionGrid } from "@/components/submission-grid";
 import { api, ApiError } from "@/lib/api";
@@ -39,7 +33,6 @@ import type {
 } from "@/lib/types";
 
 const PAGE_SIZE = 6;
-const STATUS_OPTIONS: (SubmissionStatus | "ALL")[] = ["ALL", "PENDING", "APPROVED", "REJECTED"];
 
 function DashboardContent() {
   const [stats, setStats] = useState<SubmissionStats | null>(null);
@@ -118,24 +111,13 @@ function DashboardContent() {
             setPage(1);
           }}
         />
-        <Select
+        <StatusFilter
           value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value as SubmissionStatus | "ALL");
+          onChange={(value) => {
+            setStatusFilter(value);
             setPage(1);
           }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status === "ALL" ? "All statuses" : status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
 
       <SubmissionGrid

@@ -40,6 +40,7 @@ export type ListSubmissionsQuery = z.infer<typeof listSubmissionsQuerySchema>;
 export const listMySubmissionsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
+  status: submissionStatusEnum.optional(),
   search: z.string().trim().min(1).max(150).optional(),
 });
 
